@@ -1,0 +1,70 @@
+pip install pysha3 hashlib requests
+
+import hashlib
+import time
+import requests
+import json
+from typing import List, Tuple
+
+class Transaction:
+    def __init__(self, sender: str, receiver: str, amount: int, timestamp: float, signature: str):
+        self.sender = sender
+        self.receiver = receiver
+        self.amount = amount
+        self.timestamp = timestamp
+        self.signature = signature
+
+class Block:
+    def __init__(self, index: int, previous_hash: str, timestamp: float, transactions: List[Transaction], hash: str, nonce: int = 0):
+        self.index = index
+        self.previous_hash = previous_hash
+        self.timestamp = timestamp
+        self.transactions = transactions
+        self.hash = hash
+        self.nonce = nonce
+
+class IncryptBlockchain:
+    def __init__(self):
+        self.chain = [self.create_genesis_block()]
+        self.difficulty = 5
+        self.mining_reward = 1_000_000_000  # 1 billion INCRYPT tokens
+        self.total_supply = 100_000_000_000  # 100 billion INCRYPT tokens
+        self.pre_mined_supply = 1_000_000_000  # 1 billion pre-mined INCRYPT tokens
+        self.nodes = set()
+
+    def create_genesis_block(self) -> Block:
+        return Block(0, "0" * 64, int(time.time()), [], self.calculate_hash(0, "0" * 64, 0, []))
+
+    def calculate_hash(self, index: int, previous_hash: str, timestamp: float, transactions: List[Transaction], nonce: int = 0) -> str:
+        value = str(index) + str(previous_hash) + str(timestamp) + json.dumps([tx.__dict__ for tx in transactions]) + str(nonce)
+        return hashlib.sha3_256(value.encode('utf-8')).hexdigest()
+
+    def proof_of_work(self, last_block: Block, difficulty: int) -> int:
+        exponent = difficulty
+        while True:
+            guess = (str(time.time()) + str(last_block.nonce)).encode('utf-8')
+            guess_hash = hashlib.sha3_256(guess).hexdigest()
+            if guess_hash[:exponent] == '0' * exponent:
+                return guess_hash, last_block.nonce
+
+    def add_block(self, block: Block):
+        self.chain.append(block)
+
+    def is_chain_valid(self, chain: List[Block]) -> bool:
+        for i in range(1, len(chain)):
+            current_block = chain[i]
+            previous_block = chain[i - 1]
+
+            if current_block.hash != self.calculate_hash(current_block.index, previous_block.hash, current_block.timestamp, current_block.transactions, current_block.nonce):
+                return False
+
+            if current_block.previous_hash != previous_block.hash:
+                return False
+
+        return True
+
+    def add_transaction(self, transaction: Transaction):
+        self.chain[-1].transactions.append(transaction)
+
+    def mine_block(self):
+        last
